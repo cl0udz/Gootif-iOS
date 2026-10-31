@@ -6,7 +6,7 @@ struct ServiceNotificationsView: View {
     @State private var notifications: [GootifNotification] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var selectedNotification: GootifNotification?
+    @Binding var selectedNotification: GootifNotification?
 
     var body: some View {
         ZStack {
@@ -32,10 +32,20 @@ struct ServiceNotificationsView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(notifications) { notification in
-                            NotificationCardView(notification: notification)
-                                .onTapGesture {
+                            HStack(spacing: 4) {
+                                Button {
                                     selectedNotification = notification
+                                } label: {
+                                    NotificationCardView(notification: notification)
+                                        .notificationSelection(selectedNotification?.id == notification.id)
                                 }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("service-notification-\(notification.id)")
+
+                                if let url = notification.primaryURL {
+                                    RowOpenLinkButton(url: url)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -45,16 +55,24 @@ struct ServiceNotificationsView: View {
         }
         .navigationTitle(serviceName)
         .refreshable { await load() }
-        .task { await load() }
-        .sheet(item: $selectedNotification) { notification in
-            NotificationDetailView(notification: notification) {
-                notifications.removeAll { $0.id == notification.id }
-                selectedNotification = nil
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
+                    .disabled(isLoading)
+                    .keyboardShortcut("r", modifiers: .command)
             }
         }
+        .task(id: PushNotifications.shared.refreshRevision) { await load() }
+
     }
 
     private func load() async {
+        #if DEBUG
+        if CommandLine.arguments.contains("-layoutPreview") {
+            notifications = LayoutPreviewData.notifications.filter { $0.service == serviceName }
+            return
+        }
+        #endif
         isLoading = true
         errorMessage = nil
         do {

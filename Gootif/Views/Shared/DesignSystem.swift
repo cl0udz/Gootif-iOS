@@ -139,3 +139,22 @@ struct PriorityIndicator: View {
             .frame(width: 8, height: 8)
     }
 }
+
+// Constrain the reading measure while letting the scroll surface fill its pane.
+extension View {
+    func readableContent(maxWidth: CGFloat = 760) -> some View {
+        self
+            .frame(maxWidth: maxWidth, alignment: .leading)
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .top)
+    }
+}
+
+extension View {
+    func notificationSelection(_ selected: Bool) -> some View {
+        self
+            .background(selected ? AppColors.accent.opacity(0.12) : .clear,
+                        in: RoundedRectangle(cornerRadius: 12))
+            .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+}

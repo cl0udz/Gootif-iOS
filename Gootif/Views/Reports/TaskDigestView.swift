@@ -5,6 +5,8 @@ struct TaskDigestView: View {
     let notification: GootifNotification
     var onDelete: (() -> Void)?
 
+    @State private var readingSection: String?
+
     private var digest: TaskDigest? { notification.payload(TaskDigest.self) }
 
     /// Groups items by `category`, preserving first-seen order.
@@ -22,7 +24,7 @@ struct TaskDigestView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            LazyVStack(alignment: .leading, spacing: 22) {
                 ReportMasthead(
                     kicker: "Inbox & Calendar",
                     title: notification.title,
@@ -61,12 +63,16 @@ struct TaskDigestView: View {
                         }
                         .floatingCard()
                     }
+                    .id(section.category)
                 }
 
                 ReportFooter(notification: notification, onDelete: onDelete)
             }
-            .padding()
+            .scrollTargetLayout()
+            .readableContent()
+            .textSelection(.enabled)
         }
+        .scrollPosition(id: $readingSection)
     }
 }
 

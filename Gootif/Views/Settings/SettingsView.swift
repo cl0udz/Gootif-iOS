@@ -18,11 +18,13 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     apiKeyCard
+                    pushCard
                     serverCard
                 }
-                .padding()
+                .readableContent(maxWidth: 640)
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Settings")
         .onChange(of: apiKeyDraft) { _, _ in testResult = nil }
     }
@@ -37,6 +39,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
 
             TextField("Paste new API key", text: $apiKeyDraft, axis: .vertical)
+                .accessibilityIdentifier("settings-key-draft")
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.system(.footnote, design: .monospaced))
@@ -127,16 +130,31 @@ struct SettingsView: View {
         .floatingCard()
     }
 
+    private var pushCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Notifications", systemImage: "bell.badge")
+                .font(.headline)
+            Toggle("Receive push notifications", isOn: Binding(
+                get: { PushNotifications.shared.enabled },
+                set: { PushNotifications.shared.setEnabled($0) }
+            ))
+            Text(PushNotifications.shared.status)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Retry registration") { PushNotifications.shared.start() }
+        }
+        .floatingCard()
+    }
+
     private var serverCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Server", systemImage: "server.rack")
                 .font(.headline)
 
-            HStack {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Endpoint")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Spacer()
                 Text(APIClient.baseURL)
                     .font(.caption.monospaced())
             }
@@ -146,6 +164,7 @@ struct SettingsView: View {
 
     private func save() {
         AppSettings.apiKeyOverride = apiKeyDraft
+        PushNotifications.shared.start()
         apiKeyDraft = AppSettings.apiKeyOverride
         withAnimation { showSaved = true }
         Task {

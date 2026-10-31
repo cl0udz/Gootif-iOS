@@ -88,4 +88,23 @@ enum APIClient {
         req.timeoutInterval = 10
         _ = try await perform(req)
     }
+
+    static func updatePushRegistration(installationID: String, token: String?, environment: String, enabled: Bool) async throws {
+        #if os(iOS)
+        let platform = "ios"
+        #else
+        let platform = "macos"
+        #endif
+        var body: [String: Any] = ["installation_id": installationID, "enabled": enabled]
+        if enabled, let token {
+            body["token"] = token
+            body["platform"] = platform
+            body["topic"] = Bundle.main.bundleIdentifier
+            body["environment"] = environment
+        }
+        var req = request(path: "/api/devices", method: "POST")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        _ = try await perform(req)
+    }
 }

@@ -10,6 +10,7 @@ struct ServiceGroup: Identifiable {
 
 struct ServiceGroupCardView: View {
     let group: ServiceGroup
+    var selectedID: String? = nil
     var onSelect: (GootifNotification) -> Void
 
     var body: some View {
@@ -19,13 +20,21 @@ struct ServiceGroupCardView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(group.notifications.enumerated()), id: \.element.id) { index, notification in
-                    Button {
-                        onSelect(notification)
-                    } label: {
-                        NotificationRow(notification: notification)
-                            .padding(.vertical, 10)
+                    HStack(spacing: 4) {
+                        Button {
+                            onSelect(notification)
+                        } label: {
+                            NotificationRow(notification: notification)
+                                .padding(.vertical, 10)
+                                .notificationSelection(selectedID == notification.id)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("notification-\(notification.id)")
+
+                        if let url = notification.primaryURL {
+                            RowOpenLinkButton(url: url)
+                        }
                     }
-                    .buttonStyle(.plain)
 
                     if index < group.notifications.count - 1 {
                         Divider().opacity(0.4)
@@ -64,16 +73,17 @@ struct ServiceGroupCardView: View {
 }
 
 private struct NotificationRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let notification: GootifNotification
 
     var body: some View {
-        HStack(spacing: 12) {
+        (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))) {
             PriorityIndicator(priority: notification.priority)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(notification.title)
                     .font(.subheadline.weight(.medium))
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -90,6 +100,7 @@ private struct NotificationRow: View {
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
 }

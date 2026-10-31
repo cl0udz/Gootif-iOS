@@ -3,6 +3,7 @@ import SwiftUI
 struct NotificationDetailView: View {
     let notification: GootifNotification
     var onDelete: (() -> Void)?
+    var showsDone = true
 
     @Environment(\.dismiss) private var dismiss
     @State private var isDeleting = false
@@ -16,8 +17,11 @@ struct NotificationDetailView: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                if showsDone {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", systemImage: "checkmark") { dismiss() }
+                            .keyboardShortcut(.cancelAction)
+                    }
                 }
             }
         }
@@ -62,14 +66,16 @@ struct NotificationDetailView: View {
                         }
 
                         // Title
-                        Text(notification.title)
-                            .font(.title2.bold())
+                        SelectableText(text: notification.title, style: .title2, bold: true)
+
+                        // Primary action
+                        if let url = notification.primaryURL {
+                            OpenLinkButton(url: url)
+                        }
 
                         // Body
                         if !notification.body.isEmpty {
-                            Text(notification.body)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
+                            SelectableText(text: notification.body, color: .secondaryLabel)
                         }
 
                         // Metadata
@@ -79,13 +85,11 @@ struct NotificationDetailView: View {
                                     .font(.headline)
 
                                 ForEach(notification.metadata.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
-                                    HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         Text(key)
                                             .font(.caption.weight(.medium))
                                             .foregroundStyle(.secondary)
-                                        Spacer()
-                                        Text(value.displayString)
-                                            .font(.caption.monospaced())
+                                        SelectableText(text: value.displayString, style: .caption1, monospaced: true)
                                     }
                                 }
                             }
@@ -125,7 +129,7 @@ struct NotificationDetailView: View {
                         .disabled(isDeleting)
                         .padding(.top, 8)
                     }
-                    .padding()
+                    .readableContent()
                 }
             }
 
@@ -134,7 +138,7 @@ struct NotificationDetailView: View {
         do {
             try await APIClient.deleteNotification(id: notification.id)
             onDelete?()
-            dismiss()
+            if onDelete == nil { dismiss() }
         } catch {
             isDeleting = false
         }

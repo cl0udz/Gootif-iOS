@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NotificationCardView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let notification: GootifNotification
 
     var body: some View {
@@ -10,9 +11,9 @@ struct NotificationCardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(notification.title)
                     .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
 
-                HStack(spacing: 6) {
+                (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 6))) {
                     Text(notification.service)
                         .font(.caption)
                         .foregroundStyle(AppColors.accent)

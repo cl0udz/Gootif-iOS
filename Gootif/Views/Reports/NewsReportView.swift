@@ -5,6 +5,8 @@ struct NewsReportView: View {
     let notification: GootifNotification
     var onDelete: (() -> Void)?
 
+    @State private var readingItem: String?
+
     private var report: NewsReport? { notification.payload(NewsReport.self) }
 
     // UI-testing hook: start scrolled to a given anchor for screenshots.
@@ -21,7 +23,7 @@ struct NewsReportView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            LazyVStack(alignment: .leading, spacing: 24) {
                 ReportMasthead(
                     kicker: report?.edition ?? "Pre-Market Brief",
                     title: notification.title,
@@ -42,10 +44,13 @@ struct NewsReportView: View {
                 if let items = report?.items, !items.isEmpty {
                     Divider()
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        NewsStoryCard(item: item)
-                        if index < items.count - 1 {
-                            Divider().padding(.vertical, 4)
+                        VStack(alignment: .leading, spacing: 24) {
+                            NewsStoryCard(item: item)
+                            if index < items.count - 1 {
+                                Divider().padding(.vertical, 4)
+                            }
                         }
+                        .id(item.id)
                     }
                 } else if report == nil {
                     // Payload missing/unparseable — show the plain body as a fallback.
@@ -55,8 +60,11 @@ struct NewsReportView: View {
 
                 ReportFooter(notification: notification, onDelete: onDelete)
             }
-            .padding()
+            .scrollTargetLayout()
+            .readableContent()
+            .textSelection(.enabled)
         }
+        .scrollPosition(id: $readingItem)
         .defaultScrollAnchor(testScrollAnchor)
     }
 }

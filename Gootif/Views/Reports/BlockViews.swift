@@ -30,7 +30,7 @@ struct BlocksView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ForEach(blocks) { block in
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .statRow(let b): StatRowView(block: b)
                 case .table(let b): TableBlockView(block: b)
@@ -126,6 +126,7 @@ private struct StatTile: View {
 // MARK: - Table
 
 struct TableBlockView: View {
+    @ScaledMetric(relativeTo: .caption) private var minimumColumnWidth = 110.0
     let block: TableBlock
 
     /// Agents sometimes send all-empty column names; skip the header then.
@@ -141,13 +142,40 @@ struct TableBlockView: View {
         VStack(alignment: .leading, spacing: 8) {
             BlockTitle(title: block.title, unit: nil)
 
-            // NOTE: Grid must NOT be wrapped in ScrollView(.horizontal) — the
-            // unbounded width breaks Grid layout and nothing draws. Cells wrap
-            // vertically instead, so any column count fits the card width.
+            ViewThatFits(in: .horizontal) {
+                tableGrid
+                    .frame(minWidth: CGFloat(max(columnCount, 1)) * minimumColumnWidth)
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(Array(block.rows.enumerated()), id: \.offset) { index, row in
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(row.enumerated()), id: \.offset) { column, cell in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    if column < block.columns.count, !block.columns[column].isEmpty {
+                                        Text(block.columns[column])
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text(cell)
+                                        .font(.caption)
+                                        .monospacedDigit()
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                        if index < block.rows.count - 1 { Divider() }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var tableGrid: some View {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 0) {
                 if hasHeader {
                     GridRow {
-                        ForEach(block.columns, id: \.self) { col in
+                        ForEach(Array(block.columns.enumerated()), id: \.offset) { _, col in
                             Text(col)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
@@ -175,9 +203,6 @@ struct TableBlockView: View {
                     .padding(.vertical, 6)
                 }
             }
-        }
-        .padding(12)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

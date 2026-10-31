@@ -3,17 +3,29 @@ import SwiftUI
 // MARK: - Markdown paragraph
 
 /// Renders inline markdown (bold, italics, links) while preserving whitespace.
+/// Bare URLs become tappable too, since markdown parsing leaves them as plain text.
 struct MarkdownText: View {
     let text: String
-    var body: some View {
-        if let attr = try? AttributedString(
+    var body: Text {
+        if var attr = try? AttributedString(
             markdown: text,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         ) {
-            Text(attr)
-        } else {
-            Text(text)
+            let plain = String(attr.characters)
+            for link in LinkDetector.links(in: plain) {
+                let start = attr.characters.index(
+                    attr.startIndex, offsetBy: plain.distance(from: plain.startIndex, to: link.range.lowerBound)
+                )
+                let end = attr.characters.index(
+                    start, offsetBy: plain.distance(from: link.range.lowerBound, to: link.range.upperBound)
+                )
+                if attr[start..<end].runs.allSatisfy({ $0.link == nil }) {
+                    attr[start..<end].link = link.url
+                }
+            }
+            return Text(attr)
         }
+        return Text(text)
     }
 }
 
@@ -165,6 +177,8 @@ struct ReadAtSourceLink: View {
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppColors.accent)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
             }
         }
     }
@@ -218,7 +232,7 @@ struct ReportFooter: View {
         do {
             try await APIClient.deleteNotification(id: notification.id)
             onDelete?()
-            dismiss()
+            if onDelete == nil { dismiss() }
         } catch {
             isDeleting = false
         }

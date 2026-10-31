@@ -5,6 +5,8 @@ struct SecurityFeedView: View {
     let notification: GootifNotification
     var onDelete: (() -> Void)?
 
+    @State private var readingItem: String?
+
     private var report: SecurityReport? { notification.payload(SecurityReport.self) }
 
     // UI-testing hook: start scrolled to a given anchor for screenshots.
@@ -19,7 +21,7 @@ struct SecurityFeedView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            LazyVStack(alignment: .leading, spacing: 22) {
                 ReportMasthead(
                     kicker: "LLM Security",
                     title: notification.title,
@@ -40,6 +42,7 @@ struct SecurityFeedView: View {
                 if let items = report?.items, !items.isEmpty {
                     ForEach(items) { item in
                         SecurityItemCard(item: item)
+                            .id(item.id)
                     }
                 } else if report == nil {
                     Text(notification.body).foregroundStyle(.secondary)
@@ -47,8 +50,11 @@ struct SecurityFeedView: View {
 
                 ReportFooter(notification: notification, onDelete: onDelete)
             }
-            .padding()
+            .scrollTargetLayout()
+            .readableContent()
+            .textSelection(.enabled)
         }
+        .scrollPosition(id: $readingItem)
         .defaultScrollAnchor(testScrollAnchor)
     }
 }

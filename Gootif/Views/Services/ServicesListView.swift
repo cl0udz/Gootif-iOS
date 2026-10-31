@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ServicesListView: View {
+    @Binding var selectedNotification: GootifNotification?
     @State private var services: [GootifService] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -33,6 +34,7 @@ struct ServicesListView: View {
                                 ServiceRowView(service: service)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("service-\(service.name)")
                         }
                     }
                     .padding(.horizontal)
@@ -42,13 +44,26 @@ struct ServicesListView: View {
         }
         .navigationTitle("Services")
         .navigationDestination(for: String.self) { serviceName in
-            ServiceNotificationsView(serviceName: serviceName)
+            ServiceNotificationsView(serviceName: serviceName, selectedNotification: $selectedNotification)
         }
         .refreshable { await load() }
-        .task { await load() }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
+                    .disabled(isLoading)
+                    .keyboardShortcut("r", modifiers: .command)
+            }
+        }
+        .task(id: PushNotifications.shared.refreshRevision) { await load() }
     }
 
     private func load() async {
+        #if DEBUG
+        if CommandLine.arguments.contains("-layoutPreview") {
+            services = [GootifService(name: "premarket-brief", notificationCount: 1, lastNotificationAt: nil)]
+            return
+        }
+        #endif
         isLoading = true
         errorMessage = nil
         do {
@@ -61,6 +76,7 @@ struct ServicesListView: View {
 }
 
 struct ServiceRowView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let service: GootifService
 
     var body: some View {
@@ -71,7 +87,7 @@ struct ServiceRowView: View {
                 Text(service.name)
                     .font(.subheadline.weight(.semibold))
 
-                HStack(spacing: 6) {
+                (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 6))) {
                     Text("\(service.notificationCount) notification\(service.notificationCount == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundStyle(.secondary)
