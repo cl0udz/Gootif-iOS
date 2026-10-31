@@ -26,6 +26,7 @@ targets:
       path: Gootif/App/Gootif.entitlements
       properties:
         aps-environment: $(APNS_ENVIRONMENT)
+        com.apple.developer.usernotifications.time-sensitive: true
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1,2"
