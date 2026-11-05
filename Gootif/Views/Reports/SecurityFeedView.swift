@@ -251,6 +251,11 @@ private struct SecurityItemCard: View {
                     }
             }
 
+            // The core figure explains the work at a glance, so it stays visible.
+            if !figures.isEmpty {
+                BlocksView(blocks: figures)
+            }
+
             if isExpanded {
                 details
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -278,6 +283,9 @@ private struct SecurityItemCard: View {
         .cardSurface()
     }
 
+    private var figures: [ReportBlock] { item.blocks?.filter(\.isDiagram) ?? [] }
+    private var resultBlocks: [ReportBlock] { item.blocks?.filter { !$0.isDiagram } ?? [] }
+
     @ViewBuilder
     private var details: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -289,6 +297,10 @@ private struct SecurityItemCard: View {
                 }
             }
 
+            if !resultBlocks.isEmpty {
+                BlocksView(blocks: resultBlocks)
+            }
+
             if let summary = item.summary, !summary.isEmpty, summary != item.insight {
                 section("Details", systemImage: "doc.text") {
                     MarkdownText(text: summary)
@@ -296,10 +308,6 @@ private struct SecurityItemCard: View {
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-            }
-
-            if let blocks = item.blocks, !blocks.isEmpty {
-                BlocksView(blocks: blocks)
             }
 
             if let tags = item.tags, !tags.isEmpty {

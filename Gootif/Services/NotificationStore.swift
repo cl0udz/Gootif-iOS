@@ -34,6 +34,13 @@ final class NotificationStore {
             notifications = LayoutPreviewData.notifications
             return
         }
+        // Render reports from a local JSON array of notifications (simulator only).
+        if let flag = CommandLine.arguments.firstIndex(of: "-reportFixture"), flag + 1 < CommandLine.arguments.count,
+           let data = FileManager.default.contents(atPath: CommandLine.arguments[flag + 1]),
+           let fixture = try? JSONDecoder().decode([GootifNotification].self, from: data) {
+            notifications = fixture
+            return
+        }
         #endif
         isLoading = true
         errorMessage = nil

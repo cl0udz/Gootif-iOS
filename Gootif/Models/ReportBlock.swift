@@ -4,16 +4,22 @@ import Foundation
 //
 // Agents may attach a `blocks` array to a report payload (rendered after the
 // summary) and/or to individual items (rendered inside the item card). Each
-// block is a small, typed visualization: stat row, table, bar chart, or line
-// chart. Unknown block types decode as `.unknown` and are skipped, so older
-// app builds never break on newer agents.
+// block is a small, typed visualization: stat row, table, bar chart, line
+// chart, or diagram. Unknown block types decode as `.unknown` and are skipped,
+// so older app builds never break on newer agents.
 
 enum ReportBlock: Codable, Identifiable {
     case statRow(StatRowBlock)
     case table(TableBlock)
     case barChart(BarChartBlock)
     case lineChart(LineChartBlock)
+    case diagram(DiagramBlock)
     case unknown
+
+    var isDiagram: Bool {
+        if case .diagram = self { return true }
+        return false
+    }
 
     var id: UUID { UUID() }
 
@@ -30,6 +36,8 @@ enum ReportBlock: Codable, Identifiable {
         case "table": self = .table(try single.decode(TableBlock.self))
         case "bar_chart": self = .barChart(try single.decode(BarChartBlock.self))
         case "line_chart": self = .lineChart(try single.decode(LineChartBlock.self))
+        // A malformed figure is skipped rather than failing the whole report.
+        case "diagram": self = (try? single.decode(DiagramBlock.self)).map(Self.diagram) ?? .unknown
         default: self = .unknown
         }
     }
@@ -41,6 +49,7 @@ enum ReportBlock: Codable, Identifiable {
         case .table(let b): try single.encode(b)
         case .barChart(let b): try single.encode(b)
         case .lineChart(let b): try single.encode(b)
+        case .diagram(let b): try single.encode(b)
         case .unknown: break
         }
     }
@@ -96,5 +105,43 @@ struct LineChartBlock: Codable {
         let x: String
         let y: Double
         var id: String { x }
+    }
+}
+
+/// A paper's core figure: nodes laid out in agent-chosen rows (read top to
+/// bottom), arrows between them, and dashed zones around consecutive rows.
+struct DiagramBlock: Codable {
+    let type: String?
+    let title: String?
+    let caption: String?
+    let rows: [[Node]]
+    let edges: [Edge]
+    let zones: [Zone]?
+
+    struct Node: Codable, Identifiable {
+        let id: String
+        let label: String
+        let detail: String?
+        let role: String?  // attacker | user | data | model | system | tool | defense | impact | result
+    }
+
+    struct Edge: Codable {
+        let from: String
+        let to: String
+        let label: String?
+        let style: String?  // flow | attack | blocked | feedback
+    }
+
+    struct Zone: Codable {
+        let label: String
+        let fromRow: Int
+        let toRow: Int
+        let kind: String?  // trusted | untrusted | neutral
+
+        enum CodingKeys: String, CodingKey {
+            case label, kind
+            case fromRow = "from_row"
+            case toRow = "to_row"
+        }
     }
 }

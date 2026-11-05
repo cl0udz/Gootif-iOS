@@ -36,6 +36,7 @@ struct BlocksView: View {
                 case .table(let b): TableBlockView(block: b)
                 case .barChart(let b): BarChartView(block: b)
                 case .lineChart(let b): LineChartView(block: b)
+                case .diagram(let b): DiagramView(block: b)
                 case .unknown: EmptyView()
                 }
             }
@@ -43,7 +44,7 @@ struct BlocksView: View {
     }
 }
 
-private struct BlockTitle: View {
+struct BlockTitle: View {
     let title: String?
     let unit: String?
 
