@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Color(hex:)
 
@@ -18,67 +19,52 @@ extension Color {
         }
         self.init(red: r, green: g, blue: b)
     }
-}
 
-// MARK: - Semantic Colors
-
-enum AppColors {
-    static let accent = Color(hex: "0EA5E9")
-    static let accentSecondary = Color(hex: "6366F1")
-    static let positive = Color(hex: "34D399")
-    static let warning = Color(hex: "FBBF24")
-    static let negative = Color(hex: "F87171")
-    static let info = Color(hex: "60A5FA")
-    static let cardBackground = Color(uiColor: .systemBackground)
-    static let cardBorder = Color.primary.opacity(0.06)
-    static let subtleText = Color.secondary
-}
-
-// MARK: - App gradient background
-
-struct AppBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Group {
-            if colorScheme == .dark {
-                LinearGradient(
-                    colors: [
-                        Color(hex: "0F172A"),
-                        Color(hex: "1E293B"),
-                        Color(hex: "0F172A"),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            } else {
-                LinearGradient(
-                    colors: [
-                        Color(hex: "F0F9FF"),
-                        Color(hex: "E0F2FE"),
-                        Color(hex: "F0F9FF"),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-        }
-        .ignoresSafeArea()
+    /// A color that resolves differently in light and dark mode.
+    init(light: String, dark: String) {
+        self.init(uiColor: UIColor { traits in
+            UIColor(Color(hex: traits.userInterfaceStyle == .dark ? dark : light))
+        })
     }
 }
 
-// MARK: - Floating card
+// MARK: - Semantic Colors
+//
+// One accent, and status colors from the system palette so text and tints
+// stay readable on solid surfaces in both modes. Everything else is label
+// hierarchy (.primary / .secondary) on opaque backgrounds — never on material,
+// where vibrancy washes secondary text out.
+
+enum AppColors {
+    static let accent = Color(light: "0369A1", dark: "38BDF8")
+    static let accentSecondary = Color(uiColor: .systemIndigo)
+    static let positive = Color(uiColor: .systemGreen)
+    static let warning = Color(uiColor: .systemOrange)
+    static let negative = Color(uiColor: .systemRed)
+    static let info = Color(uiColor: .systemBlue)
+    static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    static let insetBackground = Color(uiColor: .tertiarySystemFill)
+    static let subtleText = Color.secondary
+}
+
+// MARK: - App background
+
+struct AppBackground: View {
+    var body: some View {
+        Color(uiColor: .systemGroupedBackground)
+            .ignoresSafeArea()
+    }
+}
+
+// MARK: - Card surface
 
 extension View {
-    func floatingCard(padding: CGFloat = 16) -> some View {
+    /// An opaque grouped-content card. No shadow or material: hierarchy comes
+    /// from the background step, so nested content keeps full contrast.
+    func cardSurface(padding: CGFloat = 16) -> some View {
         self
             .padding(padding)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(AppColors.cardBorder, lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
+            .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -88,73 +74,118 @@ struct ServiceBadge: View {
     let serviceName: String
     var size: CGFloat = 44
 
-    private var config: (symbol: String, color: String) {
-        ServiceBadge.serviceIcons[serviceName.lowercased()] ?? ("bell.fill", "0EA5E9")
+    private var config: (symbol: String, color: Color) {
+        ServiceBadge.serviceIcons[serviceName.lowercased()] ?? ("bell.fill", AppColors.accent)
     }
 
-    static let serviceIcons: [String: (symbol: String, color: String)] = [
-        "home-server": ("server.rack", "6366F1"),
-        "nas": ("externaldrive.fill", "8B5CF6"),
-        "pi": ("cpu", "EC4899"),
-        "docker": ("shippingbox.fill", "0EA5E9"),
-        "backup": ("arrow.clockwise.icloud.fill", "34D399"),
-        "monitor": ("waveform.path.ecg", "F59E0B"),
-        "security": ("lock.shield.fill", "EF4444"),
-        "cron": ("clock.fill", "6366F1"),
-        "test-service": ("testtube.2", "60A5FA"),
+    static let serviceIcons: [String: (symbol: String, color: Color)] = [
+        "home-server": ("server.rack", Color(uiColor: .systemIndigo)),
+        "nas": ("externaldrive.fill", Color(uiColor: .systemPurple)),
+        "pi": ("cpu", Color(uiColor: .systemPink)),
+        "docker": ("shippingbox.fill", Color(uiColor: .systemBlue)),
+        "backup": ("arrow.clockwise.icloud.fill", Color(uiColor: .systemGreen)),
+        "monitor": ("waveform.path.ecg", Color(uiColor: .systemOrange)),
+        "security": ("lock.shield.fill", Color(uiColor: .systemRed)),
+        "cron": ("clock.fill", Color(uiColor: .systemIndigo)),
+        "test-service": ("testtube.2", Color(uiColor: .systemTeal)),
+        "iphone duo": ("iphone", Color(uiColor: .systemGray)),
         // Claude agents
-        "premarket-brief": ("chart.line.uptrend.xyaxis", "34D399"),
-        "inbox-digest": ("tray.full.fill", "6366F1"),
-        "llm-security": ("brain.head.profile", "8B5CF6"),
+        "premarket-brief": ("chart.line.uptrend.xyaxis", Color(uiColor: .systemGreen)),
+        "robin-agent": ("chart.line.uptrend.xyaxis", Color(uiColor: .systemGreen)),
+        "inbox-digest": ("tray.full.fill", Color(uiColor: .systemIndigo)),
+        "llm-security": ("brain.head.profile", Color(uiColor: .systemPurple)),
     ]
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(Color(hex: config.color))
+                .fill(config.color.gradient)
             Image(systemName: config.symbol)
-                .font(.system(size: size * 0.38, weight: .semibold))
+                .font(.system(size: size * 0.46, weight: .semibold))
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }
 
-// MARK: - Priority indicator
+// MARK: - Priority / importance
+
+enum Importance {
+    static func color(_ level: String?) -> Color? {
+        switch level?.lowercased() {
+        case "high": return AppColors.negative
+        case "medium": return AppColors.warning
+        default: return nil
+        }
+    }
+}
 
 struct PriorityIndicator: View {
     let priority: String
 
-    private var color: Color {
-        switch priority {
-        case "high": return AppColors.negative
-        case "medium": return AppColors.warning
-        default: return AppColors.subtleText.opacity(0.5)
-        }
-    }
-
     var body: some View {
         Circle()
-            .fill(color)
+            .fill(Importance.color(priority) ?? Color(uiColor: .systemGray3))
             .frame(width: 8, height: 8)
     }
 }
+
+// MARK: - Layout helpers
 
 // Constrain the reading measure while letting the scroll surface fill its pane.
 extension View {
     func readableContent(maxWidth: CGFloat = 760) -> some View {
         self
             .frame(maxWidth: maxWidth, alignment: .leading)
-            .padding()
+            .padding(.horizontal)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .top)
     }
 }
 
-extension View {
-    func notificationSelection(_ selected: Bool) -> some View {
-        self
-            .background(selected ? AppColors.accent.opacity(0.12) : .clear,
-                        in: RoundedRectangle(cornerRadius: 12))
-            .accessibilityAddTraits(selected ? [.isSelected] : [])
+/// Lays children out left to right, wrapping onto new lines — for chips and
+/// tags, which should never be cut off behind a horizontal scroll.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+    var lineSpacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map(\.width).max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + lineSpacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + lineSpacing
+        }
+    }
+
+    private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = [Row()]
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = rows[rows.count - 1].indices.isEmpty ? size.width : rows[rows.count - 1].width + spacing + size.width
+            if needed > width, !rows[rows.count - 1].indices.isEmpty {
+                rows.append(Row())
+            }
+            var row = rows[rows.count - 1]
+            row.width = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            row.height = max(row.height, size.height)
+            row.indices.append(index)
+            rows[rows.count - 1] = row
+        }
+        return rows.filter { !$0.indices.isEmpty }
     }
 }

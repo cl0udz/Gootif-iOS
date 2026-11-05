@@ -103,12 +103,20 @@ struct SecurityItem: Codable, Identifiable {
     let tags: [String]?
     let importance: String?  // high | medium | low
     let blocks: [ReportBlock]?
+    let evidence: [Evidence]?
 
     var id: String { (url ?? "") + headline }
 
     enum CodingKeys: String, CodingKey {
-        case headline, source, url, insight, innovation, summary, category, venue, tags, importance, blocks
+        case headline, source, url, insight, innovation, summary, category, venue, tags, importance, blocks, evidence
         case publishedAt = "published_at"
+    }
+
+    /// A source the agent read, and what in the item it backs.
+    struct Evidence: Codable, Hashable {
+        let url: String
+        let locator: String?
+        let supports: String?
     }
 }
 

@@ -76,24 +76,41 @@ final class ReadingContinuityTests: XCTestCase {
 }
 
 @MainActor
-final class ServiceNavigationTests: XCTestCase {
-    func testServiceSelectionSurvivesTabSwitchAndRotation() {
+final class FilterAndPagingTests: XCTestCase {
+    func testServiceFilterNarrowsTheList() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-layoutPreview"]
         app.launch()
-        defer { XCUIDevice.shared.orientation = .portrait }
-        app.buttons["Services"].firstMatch.tap()
-        app.buttons["service-premarket-brief"].tap()
-        let row = app.buttons["service-notification-layout-preview-report"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        let report = app.buttons["notification-layout-preview-report"]
+        let alert = app.buttons["notification-layout-preview-alert"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 10))
+
+        app.buttons["filter-premarket-brief"].tap()
+        XCTAssertTrue(report.waitForExistence(timeout: 5))
+        XCTAssertFalse(alert.exists)
+
+        app.buttons["filter-all"].tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+    }
+
+    func testPagerStepsThroughTheVisibleList() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-layoutPreview"]
+        app.launch()
+        let row = app.buttons["notification-layout-preview-report"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.tap()
         let summary = app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH %@", "A readable report should adapt")).firstMatch
         XCTAssertTrue(summary.waitForExistence(timeout: 5))
-        app.buttons["Recent"].firstMatch.tap()
-        app.buttons["Services"].firstMatch.tap()
-        XCTAssertTrue(summary.waitForExistence(timeout: 5))
-        XCUIDevice.shared.orientation = .landscapeLeft
+
+        let next = app.buttons["pager-next"]
+        let previous = app.buttons["pager-previous"]
+        XCTAssertFalse(previous.isEnabled)
+        next.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["detail-open-link"].firstMatch.waitForExistence(timeout: 5))
+        previous.tap()
         XCTAssertTrue(summary.waitForExistence(timeout: 5))
     }
 }
@@ -162,7 +179,7 @@ final class WindowResizingTests: XCTestCase {
             .press(forDuration: 1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.48, dy: 0.7)))
         XCTAssertLessThan(app.frame.width, initialWidth)
         XCTAssertTrue(summary.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Delete Report"].exists)
+        XCTAssertTrue(app.buttons["pager-more"].exists)
     }
 }
 

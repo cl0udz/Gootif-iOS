@@ -45,7 +45,7 @@ struct SettingsView: View {
                 .font(.system(.footnote, design: .monospaced))
                 .lineLimit(2...4)
                 .padding(12)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(AppColors.insetBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             HStack(spacing: 8) {
                 Image(systemName: AppSettings.isUsingDefaultKey ? "shield.fill" : "shield.lefthalf.filled")
@@ -87,7 +87,7 @@ struct SettingsView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule())
+                    .background(AppColors.insetBackground, in: Capsule())
                 }
                 .disabled(isTesting)
 
@@ -116,7 +116,7 @@ struct SettingsView: View {
                         .font(.footnote.weight(.medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(.regularMaterial, in: Capsule())
+                        .background(AppColors.insetBackground, in: Capsule())
                 }
             }
 
@@ -127,7 +127,7 @@ struct SettingsView: View {
                     .transition(.opacity)
             }
         }
-        .floatingCard()
+        .cardSurface()
     }
 
     private var pushCard: some View {
@@ -143,7 +143,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
             Button("Retry registration") { PushNotifications.shared.start() }
         }
-        .floatingCard()
+        .cardSurface()
     }
 
     private var serverCard: some View {
@@ -159,7 +159,7 @@ struct SettingsView: View {
                     .font(.caption.monospaced())
             }
         }
-        .floatingCard()
+        .cardSurface()
     }
 
     private func save() {

@@ -3,7 +3,6 @@ import SwiftUI
 /// Agent 1 — pre-market financial brief, rendered Apple-News style.
 struct NewsReportView: View {
     let notification: GootifNotification
-    var onDelete: (() -> Void)?
 
     @State private var readingItem: String?
 
@@ -58,7 +57,7 @@ struct NewsReportView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                ReportFooter(notification: notification, onDelete: onDelete)
+                ReportFooter(notification: notification)
             }
             .scrollTargetLayout()
             .readableContent()
@@ -81,16 +80,14 @@ private struct NewsStoryCard: View {
             }
 
             Text(item.headline)
-                .font(.system(.title3, design: .serif).weight(.semibold))
+                .font(.title3.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
 
             SourceLine(source: item.source, timestamp: item.publishedAt)
 
             if let tickers = item.tickers, !tickers.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(tickers, id: \.self) { TickerChip(ticker: $0) }
-                    }
+                FlowLayout(spacing: 6) {
+                    ForEach(tickers, id: \.self) { TickerChip(ticker: $0) }
                 }
             }
 
@@ -108,10 +105,10 @@ private struct NewsStoryCard: View {
             if let impact = item.impact, !impact.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Impact on SPY / QQQ", systemImage: "chart.line.uptrend.xyaxis")
-                        .font(.caption.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppColors.accent)
                     Text(impact)
-                        .font(.callout)
+                        .font(.body)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(12)

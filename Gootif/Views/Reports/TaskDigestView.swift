@@ -3,7 +3,6 @@ import SwiftUI
 /// Agent 2 — inbox + calendar digest, rendered as grouped checklist sections.
 struct TaskDigestView: View {
     let notification: GootifNotification
-    var onDelete: (() -> Void)?
 
     @State private var readingSection: String?
 
@@ -26,7 +25,7 @@ struct TaskDigestView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 22) {
                 ReportMasthead(
-                    kicker: "Inbox & Calendar",
+                    kicker: notification.service,
                     title: notification.title,
                     dateLine: notification.createdDate?.formatted(date: .complete, time: .shortened)
                 )
@@ -61,12 +60,12 @@ struct TaskDigestView: View {
                                 }
                             }
                         }
-                        .floatingCard()
+                        .cardSurface()
                     }
                     .id(section.category)
                 }
 
-                ReportFooter(notification: notification, onDelete: onDelete)
+                ReportFooter(notification: notification)
             }
             .scrollTargetLayout()
             .readableContent()
@@ -98,7 +97,7 @@ private struct TaskItemRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .top, spacing: 6) {
                     Text(item.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.body.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     ImportanceTag(importance: item.importance)
@@ -106,7 +105,7 @@ private struct TaskItemRow: View {
 
                 if let detail = item.detail, !detail.isEmpty {
                     Text(detail)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -117,7 +116,7 @@ private struct TaskItemRow: View {
                     }
                     if let due = ReportDate.short(item.due) {
                         Label(due, systemImage: "clock")
-                            .font(.caption2.weight(.medium))
+                            .font(.footnote.weight(.medium))
                             .foregroundStyle(AppColors.warning)
                     }
                 }

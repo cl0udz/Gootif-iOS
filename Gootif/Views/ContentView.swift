@@ -3,28 +3,19 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    @State private var store = NotificationStore()
     @State private var pendingPushLink: URL?
     @State private var selectedTab = 0
-    @State private var recentPath: [String] = []
-    @State private var servicesPath: [String] = []
-    @State private var serviceNotification: GootifNotification?
-    @State private var pushedNotification: GootifNotification?
+    @State private var selection: GootifNotification?
     @State private var pushError: String?
     @State private var failedPushID: String?
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Recent", systemImage: "bell.fill", value: 0) {
-                NotificationBrowser(path: $recentPath, selection: $pushedNotification, onDelete: didDelete) { selection in
-                    RecentView(selectedNotification: selection)
-                }
+                NotificationBrowser(store: store, selection: $selection)
             }
-            Tab("Services", systemImage: "square.stack.3d.up.fill", value: 1) {
-                NotificationBrowser(path: $servicesPath, selection: $serviceNotification, onDelete: didDelete) { selection in
-                    ServicesListView(selectedNotification: selection)
-                }
-            }
-            Tab("Settings", systemImage: "gearshape.fill", value: 2) {
+            Tab("Settings", systemImage: "gearshape.fill", value: 1) {
                 NavigationStack {
                     SettingsView()
                 }
@@ -58,15 +49,8 @@ struct ContentView: View {
         } message: { Text(pushError ?? "") }
     }
 
-    private func didDelete() {
-        pushedNotification = nil
-        serviceNotification = nil
-        PushNotifications.shared.received(id: nil, open: false)
-    }
-
     private func openPush(_ id: String) async {
         selectedTab = 0
-        recentPath = []
         let linkFromPush = PushNotifications.shared.pendingLink
         PushNotifications.shared.pendingLink = nil
         if let linkFromPush {
@@ -94,7 +78,8 @@ struct ContentView: View {
     /// Tapping an alert goes straight to its link. The detail stays selected, so
     /// returning to the app shows it, and it is the fallback for link-free pushes.
     private func didOpenPush(_ notification: GootifNotification, openLink: Bool) {
-        pushedNotification = notification
+        store.reveal(notification)
+        selection = notification
         if openLink {
             pendingPushLink = notification.primaryURL
             openPendingPushLink()
@@ -109,40 +94,60 @@ struct ContentView: View {
     }
 }
 
-/// Keep one navigation hierarchy across Duo's displays and iPad window sizes.
-/// The system owns collapse, fold-aware column sizing, and bar placement.
-private struct NotificationBrowser<Content: View>: View {
-    @Binding var path: [String]
+/// Phones — including both Duo displays — read in a push stack: the list, then
+/// a full-width pager that swipes between notifications. A split view would
+/// either squeeze the report or hide the list behind a sidebar button there.
+/// iPad keeps the list beside the reader.
+private struct NotificationBrowser: View {
+    let store: NotificationStore
     @Binding var selection: GootifNotification?
-    let onDelete: () -> Void
-    @ViewBuilder var content: (Binding<GootifNotification?>) -> Content
 
+    @State private var isReading = false
     @State private var preferredColumn: NavigationSplitViewColumn = .sidebar
 
+    private var rowSelection: Binding<GootifNotification?> {
+        Binding(
+            get: { selection },
+            set: { notification in
+                selection = notification
+                if notification != nil { isReading = true }
+            }
+        )
+    }
+
     var body: some View {
-        NavigationSplitView(preferredCompactColumn: $preferredColumn) {
-            NavigationStack(path: $path) {
-                content(Binding(
-                    get: { selection },
-                    set: { notification in
-                        selection = notification
-                        // Also handles reopening the selected row after Back.
-                        preferredColumn = notification == nil ? .sidebar : .detail
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            NavigationSplitView(preferredCompactColumn: $preferredColumn) {
+                NavigationStack {
+                    RecentView(store: store, selectedNotification: rowSelection)
+                }
+            } detail: {
+                if selection != nil {
+                    NavigationStack {
+                        NotificationPager(store: store, selection: $selection)
                     }
-                ))
+                } else {
+                    ContentUnavailableView("Select a Notification", systemImage: "bell",
+                                           description: Text("Choose an item to read its details or report."))
+                }
             }
-        } detail: {
-            if let notification = selection {
-                NotificationDetailView(notification: notification, onDelete: onDelete, showsDone: false)
-                    .id(notification.id)
-            } else {
-                ContentUnavailableView("Select a Notification", systemImage: "bell",
-                                       description: Text("Choose an item to read its details or report."))
+            .navigationSplitViewStyle(.balanced)
+            .onChange(of: selection?.id, initial: true) { _, id in
+                preferredColumn = id == nil ? .sidebar : .detail
             }
-        }
-        .navigationSplitViewStyle(.balanced)
-        .onChange(of: selection?.id, initial: true) { _, id in
-            preferredColumn = id == nil ? .sidebar : .detail
+        } else {
+            NavigationStack {
+                RecentView(store: store, selectedNotification: rowSelection)
+                    .navigationDestination(isPresented: $isReading) {
+                        if selection != nil {
+                            NotificationPager(store: store, selection: $selection)
+                        }
+                    }
+            }
+            // A push or a test hook can select without a row tap.
+            .onChange(of: selection?.id, initial: true) { _, id in
+                isReading = id != nil
+            }
         }
     }
 }

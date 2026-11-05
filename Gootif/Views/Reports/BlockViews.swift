@@ -29,7 +29,7 @@ struct BlocksView: View {
     let blocks: [ReportBlock]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .statRow(let b): StatRowView(block: b)
@@ -49,13 +49,9 @@ private struct BlockTitle: View {
 
     var body: some View {
         if let title {
-            HStack(spacing: 4) {
-                Text(title)
-                if let unit, !unit.isEmpty {
-                    Text("(\(unit))").foregroundStyle(.secondary)
-                }
-            }
-            .font(.caption.weight(.semibold))
+            (Text(title) + Text(unit.map { $0.isEmpty ? "" : "  (\($0))" } ?? "").foregroundStyle(.secondary))
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -63,14 +59,15 @@ private struct BlockTitle: View {
 // MARK: - Stat row
 
 struct StatRowView: View {
+    @ScaledMetric(relativeTo: .footnote) private var minimumTileWidth = 150.0
     let block: StatRowBlock
 
+    // Wrap instead of scrolling sideways, so no tile or label is ever cut off.
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(block.stats) { stat in
-                    StatTile(stat: stat)
-                }
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: minimumTileWidth), spacing: 10, alignment: .top)],
+                  alignment: .leading, spacing: 10) {
+            ForEach(block.stats) { stat in
+                StatTile(stat: stat)
             }
         }
     }
@@ -96,37 +93,40 @@ private struct StatTile: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(stat.label)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(stat.value)
                 .font(.title3.weight(.semibold))
-                .lineLimit(1)
+                .monospacedDigit()
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
 
             if let delta = stat.delta {
                 HStack(spacing: 3) {
                     Image(systemName: deltaSymbol)
                         .font(.caption2.weight(.bold))
                     Text(delta)
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                 }
                 .foregroundStyle(deltaColor)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(minWidth: 84, alignment: .leading)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(AppColors.insetBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
 // MARK: - Table
 
 struct TableBlockView: View {
-    @ScaledMetric(relativeTo: .caption) private var minimumColumnWidth = 110.0
+    @ScaledMetric(relativeTo: .subheadline) private var minimumColumnWidth = 120.0
     let block: TableBlock
 
     /// Agents sometimes send all-empty column names; skip the header then.
@@ -152,11 +152,11 @@ struct TableBlockView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     if column < block.columns.count, !block.columns[column].isEmpty {
                                         Text(block.columns[column])
-                                            .font(.caption2.weight(.semibold))
+                                            .font(.footnote.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                     }
                                     Text(cell)
-                                        .font(.caption)
+                                        .font(.subheadline)
                                         .monospacedDigit()
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -168,7 +168,7 @@ struct TableBlockView: View {
             }
         }
         .padding(12)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(AppColors.insetBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var tableGrid: some View {
@@ -177,9 +177,8 @@ struct TableBlockView: View {
                     GridRow {
                         ForEach(Array(block.columns.enumerated()), id: \.offset) { _, col in
                             Text(col)
-                                .font(.caption2.weight(.semibold))
+                                .font(.footnote.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
                         }
                     }
                     .padding(.vertical, 6)
@@ -194,10 +193,10 @@ struct TableBlockView: View {
                     GridRow(alignment: .top) {
                         ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
                             Text(cell)
-                                .font(.caption)
+                                .font(.subheadline)
                                 .monospacedDigit()
                                 .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: 220, alignment: .leading)
+                                .frame(maxWidth: 320, alignment: .leading)
                         }
                     }
                     .padding(.vertical, 6)
@@ -237,11 +236,11 @@ struct BarChartView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(bar.label)
-                            .font(.caption2)
+                            .font(.subheadline)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 8)
                         Text(bar.value.formatted(.number.precision(.fractionLength(0...2))))
-                            .font(.caption.weight(.semibold))
+                            .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
                     }
                     ZStack(alignment: .leading) {
@@ -258,7 +257,7 @@ struct BarChartView: View {
             }
         }
         .padding(12)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(AppColors.insetBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -306,7 +305,7 @@ struct LineChartView: View {
             .chartXAxis {
                 AxisMarks { _ in
                     AxisValueLabel()
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(Color.secondary)
                 }
             }
@@ -315,13 +314,13 @@ struct LineChartView: View {
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
                         .foregroundStyle(Color.primary.opacity(0.08))
                     AxisValueLabel()
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(Color.secondary)
                 }
             }
             .frame(height: 190)
         }
         .padding(12)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(AppColors.insetBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

@@ -37,14 +37,14 @@ struct ReportMasthead: View {
     let dateLine: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(kicker.uppercased())
-                .font(.caption.weight(.bold))
-                .tracking(1.5)
+                .font(.footnote.weight(.bold))
+                .tracking(1)
                 .foregroundStyle(AppColors.accent)
 
             Text(title)
-                .font(.system(.largeTitle, design: .serif).weight(.bold))
+                .font(.title.weight(.bold))
                 .fixedSize(horizontal: false, vertical: true)
 
             if let dateLine {
@@ -66,7 +66,7 @@ struct ImportanceTag: View {
         switch importance?.lowercased() {
         case "high": return ("High", AppColors.negative)
         case "medium": return ("Medium", AppColors.warning)
-        case "low": return ("Low", AppColors.subtleText)
+        case "low": return ("Low", .secondary)
         default: return nil
         }
     }
@@ -74,10 +74,10 @@ struct ImportanceTag: View {
     var body: some View {
         if let config {
             Text(config.label)
-                .font(.caption2.weight(.semibold))
-                .padding(.horizontal, 7)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 8)
                 .padding(.vertical, 2)
-                .background(config.color.opacity(0.18), in: Capsule())
+                .background(config.color.opacity(0.15), in: Capsule())
                 .foregroundStyle(config.color)
         }
     }
@@ -103,10 +103,10 @@ struct SentimentChip: View {
                 Image(systemName: config.symbol)
                 Text(config.label)
             }
-            .font(.caption2.weight(.semibold))
+            .font(.caption.weight(.semibold))
             .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(config.color.opacity(0.18), in: Capsule())
+            .padding(.vertical, 2)
+            .background(config.color.opacity(0.15), in: Capsule())
             .foregroundStyle(config.color)
         }
     }
@@ -118,7 +118,7 @@ struct TickerChip: View {
     let ticker: String
     var body: some View {
         Text(ticker.uppercased())
-            .font(.caption2.weight(.bold).monospaced())
+            .font(.caption.weight(.bold).monospaced())
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(AppColors.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 5))
@@ -128,14 +128,15 @@ struct TickerChip: View {
 
 struct TagChip: View {
     let text: String
-    var color: Color = AppColors.accentSecondary
+    /// nil renders a neutral chip: secondary text on a gray fill.
+    var color: Color? = nil
     var body: some View {
         Text(text)
-            .font(.caption2.weight(.medium))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.15), in: Capsule())
-            .foregroundStyle(color)
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(color?.opacity(0.14) ?? Color(uiColor: .tertiarySystemFill), in: Capsule())
+            .foregroundStyle(color ?? .secondary)
     }
 }
 
@@ -157,8 +158,9 @@ struct SourceLine: View {
                     Text(rel)
                 }
             }
-            .font(.caption)
+            .font(.footnote)
             .foregroundStyle(.secondary)
+            .lineLimit(1)
         }
     }
 }
@@ -172,10 +174,10 @@ struct ReadAtSourceLink: View {
         if let urlString, let url = URL(string: urlString) {
             Link(destination: url) {
                 HStack(spacing: 4) {
-                    Text("Read at source")
+                    Text("Source")
                     Image(systemName: "arrow.up.right")
                 }
-                .font(.caption.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppColors.accent)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
@@ -184,57 +186,18 @@ struct ReadAtSourceLink: View {
     }
 }
 
-// MARK: - Shared footer (timestamp + delete)
+// MARK: - Shared footer
 
 struct ReportFooter: View {
     let notification: GootifNotification
-    var onDelete: (() -> Void)?
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var isDeleting = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            if let date = notification.createdDate {
-                HStack(spacing: 6) {
-                    Image(systemName: "clock")
-                    Text("Generated \(date.formatted(date: .abbreviated, time: .shortened))")
-                }
-                .font(.caption)
+        if let date = notification.createdDate {
+            Label("Generated \(date.formatted(date: .abbreviated, time: .shortened))", systemImage: "clock")
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Button(role: .destructive) {
-                Task { await delete() }
-            } label: {
-                HStack {
-                    if isDeleting {
-                        ProgressView().tint(.white)
-                    } else {
-                        Image(systemName: "trash")
-                    }
-                    Text("Delete Report")
-                }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(AppColors.negative, in: Capsule())
-            }
-            .disabled(isDeleting)
-        }
-        .padding(.top, 8)
-    }
-
-    private func delete() async {
-        isDeleting = true
-        do {
-            try await APIClient.deleteNotification(id: notification.id)
-            onDelete?()
-            if onDelete == nil { dismiss() }
-        } catch {
-            isDeleting = false
+                .padding(.top, 4)
         }
     }
 }
